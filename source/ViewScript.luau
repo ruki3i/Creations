@@ -62,7 +62,7 @@ function ScriptViewer.Init()
 	editor.StrokeColor3 = Color3.fromRGB(0, 0, 0)
 	editor.StrokeTransparency = 0.75
     
-	editor:ImportTheme("https://www.codeverse.run.place/api/raw/6a693adc02faabc3dda7f0fd/Themes/PaperDark.luau")
+	editor:ImportTheme("https://raw.githubusercontent.com/ruki3i/Creations/refs/heads/main/source/LuaUTheme.luau")
 
 	btnCopy.MouseButton1Click:Connect(function()
 		if setclipboard then
