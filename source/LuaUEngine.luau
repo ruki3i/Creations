@@ -309,10 +309,16 @@ function ScrollBar.new(container, isVertical)
 	self.PressColor = container:GetAttribute("ScrollBarPressColor3") or Color3.fromRGB(40, 40, 40)
 	self.TrackTransparency = container:GetAttribute("ScrollBarTrackTransparency") or 0
 	self.ThumbTransparency = container:GetAttribute("ScrollBarThumbTransparency") or 0
+	
+	self.BaseTrackTrans = self.TrackTransparency
+	self.BaseThumbTrans = self.ThumbTransparency
+	self.BaseStrokeTrans = container:GetAttribute("ScrollBarStrokeTransparency") or 0
+	self.BaseImageTrans = 0
+
 	self.IsDraggingThumb = false
 	local imageColor = container:GetAttribute("ScrollBarImageColor3") or Color3.fromRGB(160, 160, 160)
 	local strokeColor = container:GetAttribute("ScrollBarStrokeColor3") or Color3.fromRGB(33, 33, 33)
-	local strokeTrans = container:GetAttribute("ScrollBarStrokeTransparency") or 0
+	local strokeTrans = self.BaseStrokeTrans
 	self.BarFrame = Instance.new("Frame")
 	self.BarFrame.Name = isVertical and "VScrollBar" or "HScrollBar"
 	self.BarFrame.BackgroundColor3 = self.TrackColor
@@ -434,6 +440,21 @@ function ScrollBar.new(container, isVertical)
 	self.DownBtn.MouseButton1Up:Connect(function() if stopDown then stopDown() stopDown = nil end end)
 	self.DownBtn.MouseLeave:Connect(function() if stopDown then stopDown() stopDown = nil end end)
 	return self
+end
+
+function ScrollBar:SetFocused(isFocused)
+	local targetTrack = isFocused and self.BaseTrackTrans or 0.7
+	local targetThumb = isFocused and self.BaseThumbTrans or 0.7
+	local targetImage = isFocused and self.BaseImageTrans or 0.7
+	local ts = game:GetService("TweenService")
+	local ti = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	ts:Create(self.BarFrame, ti, {BackgroundTransparency = targetTrack}):Play()
+	ts:Create(self.Track, ti, {BackgroundTransparency = targetTrack}):Play()
+	ts:Create(self.Thumb, ti, {BackgroundTransparency = targetThumb}):Play()
+	ts:Create(self.UpBtn, ti, {BackgroundTransparency = targetTrack}):Play()
+	ts:Create(self.DownBtn, ti, {BackgroundTransparency = targetTrack}):Play()
+	ts:Create(self.UpIcon, ti, {ImageTransparency = targetImage}):Play()
+	ts:Create(self.DownIcon, ti, {ImageTransparency = targetImage}):Play()
 end
 
 function ScrollBar:SetColors(trackColor, thumbColor)
@@ -726,6 +747,8 @@ function Baseline.new(canvasGroup)
 			self.ScrollOffset = Vector2.new(newX, self.ScrollOffset.Y)
 			self:UpdateBlinker(false)
 		end
+		self.VScrollBar:SetFocused(false)
+		self.HScrollBar:SetFocused(false)
 	end
 	
 	table.insert(self.Connections, self.PasteBox:GetPropertyChangedSignal("Text"):Connect(function()
@@ -1992,6 +2015,8 @@ function Baseline:Focus()
 	ContextActionService:BindAction(self.SinkActionName, function() return Enum.ContextActionResult.Sink end, false, unpack(KeyMaps.SinkKeys))
 	self.PasteBox:CaptureFocus()
 	self:UpdateBlinker(true)
+	if self.VScrollBar then self.VScrollBar:SetFocused(true) end
+	if self.HScrollBar then self.HScrollBar:SetFocused(true) end
 end
 
 function Baseline:Unfocus()
@@ -2006,6 +2031,8 @@ function Baseline:Unfocus()
 	self:UpdateBlinker(true)
 	ContextActionService:UnbindAction(self.SinkActionName)
 	self.PasteBox:ReleaseFocus()
+	if self.VScrollBar then self.VScrollBar:SetFocused(false) end
+	if self.HScrollBar then self.HScrollBar:SetFocused(false) end
 end
 
 function Baseline:HideAutocomplete()
@@ -2039,17 +2066,18 @@ function Baseline:RenderAutocomplete()
 		btn.ZIndex = 102
 		btn.Parent = rowFrame
 		local icon = Instance.new("ImageLabel")
-		icon.Size = UDim2.new(0, 16, 0, 16)
-		icon.Position = UDim2.new(0, 6, 0.5, 0)
+		icon.Size = UDim2.new(0, 20, 0, 20)
+		icon.Position = UDim2.new(0, 4, 0.5, 0)
 		icon.AnchorPoint = Vector2.new(0, 0.5)
 		icon.BackgroundTransparency = 1
 		icon.Image = match.icon
+		icon.ImageColor3 = isSelected and Color3.new(1, 1, 1) or Color3.fromRGB(220, 220, 220)
 		icon.ResampleMode = Enum.ResamplerMode.Default
 		icon.ZIndex = 102
 		icon.Parent = rowFrame
 		local label = Instance.new("TextLabel")
 		label.Size = UDim2.new(1, -30, 1, 0)
-		label.Position = UDim2.new(0, 28, 0, 0)
+		label.Position = UDim2.new(0, 30, 0, 0)
 		label.BackgroundTransparency = 1
 		label.Text = match.word
 		label.TextColor3 = isSelected and self.AutocompleteSelectedTextColor or self.AutocompleteTextColor
@@ -2817,6 +2845,10 @@ function Baseline:UpdateBlinker(autoScrollEnabled)
 	self.LineNumbersInner.Position = UDim2.new(0, 0, 0, -scrollOffsetY)
 	if self.VScrollBar then self.VScrollBar:UpdateMetrics(self.CanvasGroup.AbsoluteSize.Y, self.DocumentHeight, scrollOffsetY) end
 	if self.HScrollBar then self.HScrollBar:UpdateMetrics(viewportWidth + 8, documentTotalWidth, scrollOffsetX) end
+	if self.HScrollBar and self.VScrollBar then
+		local vVisible = self.VScrollBar.BarFrame.Visible
+		self.HScrollBar.BarFrame.Size = UDim2.new(1, vVisible and -18 or 0, 0, 18)
+	end
 	if hasLineNumbers and self.IsFocused then
 		self.CurrentLineHighlight.Visible = true
 		local targetHighlightPosition = UDim2.new(0, 0, 0, (4 + currentCursorY) - scrollOffsetY)
