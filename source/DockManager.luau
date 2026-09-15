@@ -53,10 +53,18 @@ function sspdockcontainer:Cleanup()
 	table.clear(visibleWindows)
 	table.clear(leftSide.Windows)
 	table.clear(rightSide.Windows)
-	print("SSP Debug: Cleaned up dock container.")
 end
 
 function sspdockcontainer.SetTheme(baseColor)
+	if type(baseColor) == "table" then
+		if baseColor.r then
+			baseColor = Color3.new(baseColor.r, baseColor.g, baseColor.b)
+		elseif baseColor[1] then
+			baseColor = Color3.new(baseColor[1], baseColor[2], baseColor[3])
+		else
+			baseColor = Color3.new(0.58, 0, 0)
+		end
+	end
 	local h, s, v = baseColor:ToHSV()
 	local function shift(dv) return Color3.fromHSV(h, s, math.clamp(v + dv, 0, 1)) end
 	local t = sspdockcontainer.Theme
@@ -811,8 +819,6 @@ function funcs:SetBackground(data, fps, imgTransparency)
 	local frames = type(data) == "table" and data or {data}
 	local imageLabels = {}
 
-	print("SSP Debug: Creating " .. #frames .. " frame(s) for fast animated loop.")
-
 	local function fetchAsset(url, idx)
 		if not url:find("http") then return url end
 		
@@ -983,7 +989,6 @@ function funcs:Close()
 				if closeTime == self.LastClose then
 					self.Gui.Parent = nil
 					updateWindows(true)
-					print("SSP Debug: Dock cleanly closed.")
 				end
 			end
 		end)
