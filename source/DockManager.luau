@@ -55,8 +55,15 @@ function sspdockcontainer:Cleanup()
 	table.clear(rightSide.Windows)
 end
 
-function sspdockcontainer.SetTheme(baseColor)
-	if type(baseColor) == "table" then
+function sspdockcontainer.SetTheme(selfOrColor, colorArg)
+	local baseColor = colorArg
+	if typeof(selfOrColor) == "Color3" or (type(selfOrColor) == "table" and (selfOrColor.r or selfOrColor[1])) then
+		baseColor = selfOrColor
+	elseif not baseColor then
+		baseColor = Color3.new(0.58, 0, 0)
+	end
+	
+	if type(baseColor) == "table" and typeof(baseColor) ~= "Color3" then
 		if baseColor.r then
 			baseColor = Color3.new(baseColor.r, baseColor.g, baseColor.b)
 		elseif baseColor[1] then
@@ -65,7 +72,28 @@ function sspdockcontainer.SetTheme(baseColor)
 			baseColor = Color3.new(0.58, 0, 0)
 		end
 	end
-	local h, s, v = baseColor:ToHSV()
+	
+	local h, s, v
+	local success = pcall(function() h, s, v = baseColor:ToHSV() end)
+	if not success or not h then
+		success = pcall(function() h, s, v = Color3.toHSV(baseColor) end)
+	end
+	if not success or not h then
+		local r = baseColor.R or 0
+		local g = baseColor.G or 0
+		local b = baseColor.B or 0
+		local max, min = math.max(r, g, b), math.min(r, g, b)
+		v = max
+		local d = max - min
+		if max == 0 then s = 0 else s = d / max end
+		if max == min then h = 0 else
+			if max == r then h = (g - b) / d + (g < b and 6 or 0)
+			elseif max == g then h = (b - r) / d + 2
+			elseif max == b then h = (r - g) / d + 4 end
+			h = h / 6
+		end
+	end
+	
 	local function shift(dv) return Color3.fromHSV(h, s, math.clamp(v + dv, 0, 1)) end
 	local t = sspdockcontainer.Theme
 	t.Background = baseColor
